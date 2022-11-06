@@ -70,10 +70,10 @@ architecture behavioral of cpu is
     fsm_pointer_dec,                                        --  <   || 0x3C ||dekrementace hodnoty ukazatele
     fsm_value_inc0, fsm_value_inc1, fsm_value_inc2, fsm_value_inc3,        --  +   || 0x2B ||inkrementace hodnoty aktualni bunky
     fsm_value_dec0, fsm_value_dec1, fsm_value_dec2, fsm_value_dec3,                                          --  -   || 0x2D ||dekrementace hodnoty aktualni bunky
-    fsm_while_begin,                                        --  [   || 0x5B ||zacatek while cyklu
-    fsm_while_end,                                          --  ]   || 0x5D ||konec while cyklu
-    fsm_do_while_begin,                                     --  (   || 0x28 ||zacatek do-while cyklu
-    fsm_do_while_end,                                       --  )   || 0x29 ||konec do-while cyklu
+    fsm_while_begin0, fsm_while_begin1, fsm_while_begin2, fsm_while_begin3, fsm_while_begin4,                                       --  [   || 0x5B ||zacatek while cyklu
+    fsm_while_end0, fsm_while_end1, fsm_while_end2, fsm_while_end3, fsm_while_end4, fsm_while_end5, fsm_while_end6, fsm_while_end7,                                       --  ]   || 0x5D ||konec while cyklu
+    fsm_do_while_begin0, fsm_do_while_begin1, fsm_do_while_begin2, fsm_do_while_begin3, fsm_do_while_begin4,                                     --  (   || 0x28 ||zacatek do-while cyklu
+    fsm_do_while_end0, fsm_do_while_end1, fsm_do_while_end2, fsm_do_while_end3, fsm_do_while_end4, fsm_do_while_end5, fsm_do_while_end6, fsm_do_while_end7,                                       --  )   || 0x29 ||konec do-while cyklu
     fsm_print_value0, fsm_print_value1, fsm_print_value2, fsm_print_value3, fsm_print_value4,                                        --  .   || 0x2E ||vytiskni aktualni hodnotu bunky
     fsm_get_value0, fsm_get_value1, fsm_get_value2,                                         --  ,   || 0x2C ||nacti hodnotu a uloz do aktualni bunky
     fsm_null                                                -- null || 0x00 ||zastav vykonavani programu
@@ -114,114 +114,314 @@ begin -- architecture
 
     case actual_state is
       when fsm_start =>
-              next_state <= fsm_fetch;
+        next_state <= fsm_fetch;
 
 
       when fsm_fetch =>
-              DATA_EN <= '1';
-              next_state <= fsm_decode;
+        DATA_EN <= '1';
+        next_state <= fsm_decode;
 
       
       when fsm_decode =>
-              case DATA_RDATA is
-                when X"3E" => --  >   || 0x3E ||inkrementace hodnoty ukazatele
-                  next_state <= fsm_pointer_inc;
-                when X"3C" => --  <   || 0x3C ||dekrementace hodnoty ukazatele
-                  next_state <= fsm_pointer_dec;
-                when X"2B" => --  +   || 0x2B ||inkrementace hodnoty aktualni bunky
-                  next_state <= fsm_value_inc0;
-                when X"2D" => --  -   || 0x2D ||dekrementace hodnoty aktualni bunky
-                  next_state <= fsm_value_dec0;
-                when X"5B" => --  [   || 0x5B ||zacatek while cyklu
-                  next_state <= fsm_while_begin;
-                when X"5D" => --  ]   || 0x5D ||konec while cyklu
-                  next_state <= fsm_while_end;
-                when X"28" => --  (   || 0x28 ||zacatek do-while cyklu
-                  next_state <= fsm_do_while_begin;
-                when X"29" => --  )   || 0x29 ||konec do-while cyklu
-                  next_state <= fsm_do_while_end;
-                when X"2E" => --  .   || 0x2E ||vytiskni aktualni hodnotu bunky
-                  next_state <= fsm_print_value0;
-                when X"2C" => --  ,   || 0x2C ||nacti hodnotu a uloz do aktualni bunky
-                  next_state <= fsm_get_value0;
-                when X"00" => -- null || 0x00 ||zastav vykonavani programu
-                  next_state <= fsm_null;
-                when others => -- jina hodnota
-                  pc_inc <= '1';
-                  next_state <= fsm_fetch;
-              end case;
+        case DATA_RDATA is
+          when X"3E" => --  >   || 0x3E ||inkrementace hodnoty ukazatele
+            next_state <= fsm_pointer_inc;
+          when X"3C" => --  <   || 0x3C ||dekrementace hodnoty ukazatele
+            next_state <= fsm_pointer_dec;
+          when X"2B" => --  +   || 0x2B ||inkrementace hodnoty aktualni bunky
+            next_state <= fsm_value_inc0;
+          when X"2D" => --  -   || 0x2D ||dekrementace hodnoty aktualni bunky
+            next_state <= fsm_value_dec0;
+          when X"5B" => --  [   || 0x5B ||zacatek while cyklu
+            next_state <= fsm_while_begin0;
+          when X"5D" => --  ]   || 0x5D ||konec while cyklu
+            next_state <= fsm_while_end0;
+          when X"28" => --  (   || 0x28 ||zacatek do-while cyklu
+            next_state <= fsm_do_while_begin0;
+          when X"29" => --  )   || 0x29 ||konec do-while cyklu
+            next_state <= fsm_do_while_end0;
+          when X"2E" => --  .   || 0x2E ||vytiskni aktualni hodnotu bunky
+            next_state <= fsm_print_value0;
+          when X"2C" => --  ,   || 0x2C ||nacti hodnotu a uloz do aktualni bunky
+            next_state <= fsm_get_value0;
+          when X"00" => -- null || 0x00 ||zastav vykonavani programu
+            next_state <= fsm_null;
+          when others => -- jina hodnota
+            pc_inc <= '1';
+            next_state <= fsm_fetch;
+        end case;
 
       
       when fsm_pointer_inc =>
-                next_state <= fsm_start;
-                ptr_inc <= '1';
-                pc_inc <= '1';
+        next_state <= fsm_start;
+        ptr_inc <= '1';
+        pc_inc <= '1';
       
       when fsm_pointer_dec =>
-                next_state <= fsm_start;
-                ptr_dec <= '1';
-                pc_inc <= '1';
+        next_state <= fsm_start;
+        ptr_dec <= '1';
+        pc_inc <= '1';
       
       when fsm_value_inc0 =>      
-                next_state <= fsm_value_inc1;
-                mx1_sel <= '1';
+        next_state <= fsm_value_inc1;
+        mx1_sel <= '1';
 
       when fsm_value_inc1 =>      
-                next_state <= fsm_value_inc2;
-                DATA_EN <= '1';
-                mx1_sel <= '1';
-                DATA_RDWR <= '0'; -- cteni
-                
+        next_state <= fsm_value_inc2;
+        DATA_EN <= '1';
+        mx1_sel <= '1';
+        DATA_RDWR <= '0'; -- cteni
+
 
       when fsm_value_inc2 =>
-                next_state <= fsm_value_inc3; 
-                mx1_sel <= '1';
-                mx2_sel <= "01";
+        next_state <= fsm_value_inc3; 
+        mx1_sel <= '1';
+        mx2_sel <= "01";
 
 
       when fsm_value_inc3 =>
-                next_state <= fsm_start; 
-                DATA_RDWR <= '1'; -- zapis
-                pc_inc <= '1';
-                mx1_sel <= '1';
-                DATA_EN <= '1'; 
+        next_state <= fsm_start; 
+        DATA_RDWR <= '1'; -- zapis
+        pc_inc <= '1';
+        mx1_sel <= '1';
+        DATA_EN <= '1'; 
 
 
       when fsm_value_dec0 =>      
-                next_state <= fsm_value_dec1;
-                mx1_sel <= '1'; -- ptr
+        next_state <= fsm_value_dec1;
+        mx1_sel <= '1'; -- ptr
 
       when fsm_value_dec1 =>      
-                next_state <= fsm_value_dec2;
-                DATA_EN <= '1';
-                mx1_sel <= '1';
-                DATA_RDWR <= '0'; -- cteni
+        next_state <= fsm_value_dec2;
+        DATA_EN <= '1';
+        mx1_sel <= '1';
+        DATA_RDWR <= '0'; -- cteni
                 
 
       when fsm_value_dec2 =>
-                next_state <= fsm_value_dec3; 
-                mx1_sel <= '1'; -- ptr
-                mx2_sel <= "10";
+        next_state <= fsm_value_dec3; 
+        mx1_sel <= '1'; -- ptr
+        mx2_sel <= "10";
 
 
       when fsm_value_dec3 =>
-                next_state <= fsm_start; 
-                DATA_RDWR <= '1'; -- zapis
-                pc_inc <= '1';
-                mx1_sel <= '1'; -- ptr
-                DATA_EN <= '1'; 
+        next_state <= fsm_start; 
+        DATA_RDWR <= '1'; -- zapis
+        pc_inc <= '1';
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
       
       
-      when fsm_while_begin =>  
+      when fsm_while_begin0 => 
+        next_state <= fsm_while_begin1;
+        pc_inc <= '1';
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+      when fsm_while_begin1 => 
+        next_state <= fsm_while_begin2;
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+      when fsm_while_begin2 =>
+        if DATA_RDATA /= "0000000000000" then
+          next_state <= fsm_start;
+        else
+          next_state <= fsm_while_begin3;
+          cnt_inc <= '1';
+          DATA_EN <= '1'; 
+        end if;
       
       
-      when fsm_while_end =>       
+      when fsm_while_begin3 =>
+        if cnt_state = "0000000000000" then
+          next_state <= fsm_start;
+        else
+          if DATA_RDATA = X"5B" then
+            cnt_inc <= '1';
+          elsif DATA_RDATA = X"5D" then
+            cnt_dec <= '1';
+          end if;
+          pc_inc <= '1';
+          DATA_EN <= '1';
+          next_state <= fsm_while_begin4;
+        end if;
+
+      when fsm_while_begin4 =>
+        next_state <= fsm_while_begin3;
+        DATA_EN <= '1';
       
       
-      when fsm_do_while_begin => 
+      when fsm_while_end0 =>     
+        next_state <= fsm_while_end1;
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+
+      when fsm_while_end1 => 
+        next_state <= fsm_while_end2;
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+
+      when fsm_while_end2 => 
+        if DATA_RDATA = "0000000000000" then
+          pc_inc <= '1';
+          next_state <= fsm_start;
+        else
+          mx1_sel <= '0';
+          DATA_EN <= '1'; 
+          cnt_inc <= '1';
+          pc_dec <= '1';
+          next_state <= fsm_while_end3;
+        end if;
+
+      when fsm_while_end3 =>
+        DATA_EN <= '1';
+        next_state <= fsm_while_end6;
+
+        when fsm_while_end4 =>
+        DATA_EN <= '1';
+        next_state <= fsm_while_end5;
+
+      when fsm_while_end5 =>
+        if cnt_state = "0000000000000" then
+          next_state <= fsm_start;
+        else
+          if DATA_RDATA = X"5D" then
+            cnt_inc <= '1';
+          elsif DATA_RDATA = X"5B" then
+            cnt_dec <= '1';
+          end if;
+          
+          
+          next_state <= fsm_while_end6;
+        end if;
+
+      when fsm_while_end6 =>
+        if cnt_state = "0000000000000" then
+          pc_inc <= '1';
+        else
+          pc_dec <= '1';
+        end if;
+
+        DATA_EN <= '1';
+        next_state <= fsm_while_end7;
+
+
+      when fsm_while_end7 =>
+        DATA_EN <= '1';
+        next_state <= fsm_while_end5;
+
+
+
+
+        when fsm_do_while_begin0 => 
+        next_state <= fsm_do_while_begin1;
+        pc_inc <= '1';
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+      when fsm_do_while_begin1 => 
+        next_state <= fsm_do_while_begin2;
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+      when fsm_do_while_begin2 =>
+        if DATA_RDATA /= "1111111111111" then
+          next_state <= fsm_start;
+        else
+          next_state <= fsm_do_while_begin3;
+          cnt_inc <= '1';
+          DATA_EN <= '1'; 
+        end if;
       
       
-      when fsm_do_while_end =>    
+      when fsm_do_while_begin3 =>
+        if cnt_state = "0000000000000" then
+          next_state <= fsm_start;
+        else
+          if DATA_RDATA = X"28" then
+            cnt_inc <= '1';
+          elsif DATA_RDATA = X"29" then
+            cnt_dec <= '1';
+          end if;
+          pc_inc <= '1';
+          DATA_EN <= '1';
+          next_state <= fsm_do_while_begin4;
+        end if;
+
+      when fsm_do_while_begin4 =>
+        next_state <= fsm_do_while_begin3;
+        DATA_EN <= '1';
+      
+      
+      when fsm_do_while_end0 =>     
+        next_state <= fsm_do_while_end1;
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+
+      when fsm_do_while_end1 => 
+        next_state <= fsm_do_while_end2;
+        mx1_sel <= '1'; -- ptr
+        DATA_EN <= '1'; 
+
+
+      when fsm_do_while_end2 => 
+        if DATA_RDATA = "0000000000000" then
+          pc_inc <= '1';
+          next_state <= fsm_start;
+        else
+          mx1_sel <= '0';
+          DATA_EN <= '1'; 
+          cnt_inc <= '1';
+          pc_dec <= '1';
+          next_state <= fsm_do_while_end3;
+        end if;
+
+      when fsm_do_while_end3 =>
+        DATA_EN <= '1';
+        next_state <= fsm_do_while_end6;
+
+        when fsm_do_while_end4 =>
+        DATA_EN <= '1';
+        next_state <= fsm_do_while_end5;
+
+      when fsm_do_while_end5 =>
+        if cnt_state = "0000000000000" then
+          next_state <= fsm_start;
+        else
+          if DATA_RDATA = X"29" then
+            cnt_inc <= '1';
+          elsif DATA_RDATA = X"28" then
+            cnt_dec <= '1';
+          end if;
+          
+          
+          next_state <= fsm_do_while_end6;
+        end if;
+
+      when fsm_do_while_end6 =>
+        if cnt_state = "0000000000000" then
+          pc_inc <= '1';
+        else
+          pc_dec <= '1';
+        end if;
+
+        DATA_EN <= '1';
+        next_state <= fsm_do_while_end7;
+
+
+      when fsm_do_while_end7 =>
+        DATA_EN <= '1';
+        next_state <= fsm_do_while_end5;
+
+
+
+
+
+
       
       
       when fsm_print_value0 =>   
