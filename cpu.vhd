@@ -43,6 +43,7 @@ architecture behavioral of cpu is
 
   signal cnt_inc: std_logic := '0';
   signal cnt_dec: std_logic := '0';
+  signal cnt_set1: std_logic := '0';
   signal cnt_state: std_logic_vector(12 downto 0) := (others => '0');
 
   signal pc_inc: std_logic := '0';
@@ -70,8 +71,8 @@ architecture behavioral of cpu is
     fsm_pointer_dec,                                        --  <   || 0x3C ||dekrementace hodnoty ukazatele
     fsm_value_inc0, fsm_value_inc1, fsm_value_inc2, fsm_value_inc3,        --  +   || 0x2B ||inkrementace hodnoty aktualni bunky
     fsm_value_dec0, fsm_value_dec1, fsm_value_dec2, fsm_value_dec3,                                          --  -   || 0x2D ||dekrementace hodnoty aktualni bunky
-    fsm_while_begin0, fsm_while_begin1, fsm_while_begin2, fsm_while_begin3, fsm_while_begin4,                                       --  [   || 0x5B ||zacatek while cyklu
-    fsm_while_end0, fsm_while_end1, fsm_while_end2, fsm_while_end3, fsm_while_end4, fsm_while_end5, fsm_while_end6, fsm_while_end7,                                       --  ]   || 0x5D ||konec while cyklu
+    fsm_while_begin0, fsm_while_begin1, fsm_while_begin2, fsm_while_begin3, fsm_while_begin4,fsm_while_begin5,fsm_while_begin6,                                      --  [   || 0x5B ||zacatek while cyklu
+    fsm_while_end0, fsm_while_end1, fsm_while_end2, fsm_while_end3, fsm_while_end4, fsm_while_end5, fsm_while_end6, fsm_while_end7, fsm_while_end8,fsm_while_end9,fsm_while_end10,                                      --  ]   || 0x5D ||konec while cyklu
     fsm_do_while_begin0, fsm_do_while_begin1, fsm_do_while_begin2, fsm_do_while_begin3, fsm_do_while_begin4,                                     --  (   || 0x28 ||zacatek do-while cyklu
     fsm_do_while_end0, fsm_do_while_end1, fsm_do_while_end2, fsm_do_while_end3, fsm_do_while_end4, fsm_do_while_end5, fsm_do_while_end6, fsm_do_while_end7,                                       --  )   || 0x29 ||konec do-while cyklu
     fsm_print_value0, fsm_print_value1, fsm_print_value2, fsm_print_value3, fsm_print_value4,                                        --  .   || 0x2E ||vytiskni aktualni hodnotu bunky
@@ -111,6 +112,7 @@ begin -- architecture
     DATA_RDWR <= '0';
     IN_REQ <= '0';
     OUT_WE <= '0';
+    cnt_set1 <= '0';
 
     case actual_state is
       when fsm_start =>
@@ -148,7 +150,7 @@ begin -- architecture
             next_state <= fsm_null;
           when others => -- jina hodnota
             pc_inc <= '1';
-            next_state <= fsm_fetch;
+            next_state <= fsm_start;
         end case;
 
       
@@ -213,28 +215,31 @@ begin -- architecture
       
       
       when fsm_while_begin0 => 
-        next_state <= fsm_while_begin1;
+        next_state <= fsm_while_begin6;
         pc_inc <= '1';
+        mx1_sel <= '1'; -- ptr
+
+      when fsm_while_begin6 =>
+        next_state <= fsm_while_begin2;
         mx1_sel <= '1'; -- ptr
         DATA_EN <= '1'; 
 
       when fsm_while_begin1 => 
         next_state <= fsm_while_begin2;
-        mx1_sel <= '1'; -- ptr
-        DATA_EN <= '1'; 
 
       when fsm_while_begin2 =>
         if DATA_RDATA /= "0000000000000" then
           next_state <= fsm_start;
         else
           next_state <= fsm_while_begin3;
-          cnt_inc <= '1';
+          cnt_set1 <= '1';
           DATA_EN <= '1'; 
         end if;
       
       
       when fsm_while_begin3 =>
         if cnt_state = "0000000000000" then
+          pc_dec <= '1';
           next_state <= fsm_start;
         else
           if DATA_RDATA = X"5B" then
@@ -243,48 +248,53 @@ begin -- architecture
             cnt_dec <= '1';
           end if;
           pc_inc <= '1';
-          DATA_EN <= '1';
           next_state <= fsm_while_begin4;
         end if;
 
       when fsm_while_begin4 =>
-        next_state <= fsm_while_begin3;
         DATA_EN <= '1';
+        next_state <= fsm_while_begin5;
+
+      when fsm_while_begin5 =>
+        next_state <= fsm_while_begin3;
       
+
+
+
+
+
       
       when fsm_while_end0 =>     
         next_state <= fsm_while_end1;
         mx1_sel <= '1'; -- ptr
         DATA_EN <= '1'; 
-
+        
 
       when fsm_while_end1 => 
         next_state <= fsm_while_end2;
-        mx1_sel <= '1'; -- ptr
-        DATA_EN <= '1'; 
-
 
       when fsm_while_end2 => 
         if DATA_RDATA = "0000000000000" then
           pc_inc <= '1';
           next_state <= fsm_start;
         else
-          mx1_sel <= '0';
-          DATA_EN <= '1'; 
-          cnt_inc <= '1';
+          cnt_set1 <= '1';
           pc_dec <= '1';
-          next_state <= fsm_while_end3;
+          next_state <= fsm_while_end8;
         end if;
+
+      when fsm_while_end8 =>
+        next_state <= fsm_while_end3;
 
       when fsm_while_end3 =>
         DATA_EN <= '1';
-        next_state <= fsm_while_end6;
+        next_state <= fsm_while_end10;
 
-        when fsm_while_end4 =>
-        DATA_EN <= '1';
-        next_state <= fsm_while_end5;
+      when fsm_while_end10 =>
+        next_state <= fsm_while_end4;
 
-      when fsm_while_end5 =>
+
+      when fsm_while_end4 =>
         if cnt_state = "0000000000000" then
           next_state <= fsm_start;
         else
@@ -293,26 +303,24 @@ begin -- architecture
           elsif DATA_RDATA = X"5B" then
             cnt_dec <= '1';
           end if;
-          
-          
-          next_state <= fsm_while_end6;
+          next_state <= fsm_while_end5;
         end if;
 
-      when fsm_while_end6 =>
+      when fsm_while_end5=>
         if cnt_state = "0000000000000" then
           pc_inc <= '1';
         else
           pc_dec <= '1';
         end if;
+        next_state <= fsm_while_end6;
 
+
+      when fsm_while_end6 =>
         DATA_EN <= '1';
         next_state <= fsm_while_end7;
 
-
       when fsm_while_end7 =>
-        DATA_EN <= '1';
-        next_state <= fsm_while_end5;
-
+        next_state <= fsm_while_end4;
 
 
 
@@ -375,7 +383,7 @@ begin -- architecture
         else
           mx1_sel <= '0';
           DATA_EN <= '1'; 
-          cnt_inc <= '1';
+          cnt_set1 <= '1';
           pc_dec <= '1';
           next_state <= fsm_do_while_end3;
         end if;
@@ -496,6 +504,8 @@ begin -- architecture
         cnt_state <= cnt_state + 1;
       elsif cnt_dec = '1' then
         cnt_state <= cnt_state - 1;
+      elsif cnt_set1 = '1' then
+        cnt_state <= "0000000000001";
       end if;
       
     end if;
@@ -530,7 +540,7 @@ begin -- architecture
       elsif ptr_dec = '1' then
         ptr_state <= ptr_state - 1;
       end if;
-      
+      ptr_state(12) <= '1';
     end if;
   end process;
 
