@@ -1,7 +1,7 @@
 -- cpu.vhd: Simple 8-bit CPU (BrainFuck interpreter)
 -- Copyright (C) 2022 Brno University of Technology,
 --                    Faculty of Information Technology
--- Author(s): jmeno <login AT stud.fit.vutbr.cz>
+-- Author(s): Michal Novak <xnovak3g AT stud.fit.vutbr.cz>
 --
 library ieee;
 use ieee.std_logic_1164.all;
@@ -41,27 +41,23 @@ end cpu;
 -- ----------------------------------------------------------------------------
 architecture behavioral of cpu is
 
-  signal cnt_inc: std_logic := '0';
-  signal cnt_dec: std_logic := '0';
-  signal cnt_set1: std_logic := '0';
-  signal cnt_state: std_logic_vector(12 downto 0) := (others => '0');
+  signal cnt_inc: std_logic := '0';                                     -- inkrementace hodnoty CNT
+  signal cnt_dec: std_logic := '0';                                     -- dekrementace hodnoty CNT
+  signal cnt_set1: std_logic := '0';                                    -- nastaveni hodnoty CNT na hodnotu 1
+  signal cnt_state: std_logic_vector(12 downto 0) := (others => '0');   -- hodnota CNT
 
-  signal pc_inc: std_logic := '0';
-  signal pc_dec: std_logic := '0';
-  signal pc_state: std_logic_vector(12 downto 0) := (others => '0');
+  signal pc_inc: std_logic := '0';                                      -- inkrementace hodnoty PC
+  signal pc_dec: std_logic := '0';                                      -- dekrementace hodnoty PC
+  signal pc_state: std_logic_vector(12 downto 0) := (others => '0');    -- hodnota PC             
 
-  signal ptr_inc: std_logic := '0';
-  signal ptr_dec: std_logic := '0';
-  signal ptr_state: std_logic_vector(12 downto 0) := "1000000000000";
+  signal ptr_inc: std_logic := '0';                                     -- inkrementace hodnoty PTR 
+  signal ptr_dec: std_logic := '0';                                     -- dekrementace hodnoty PTR 
+  signal ptr_state: std_logic_vector(12 downto 0) := "1000000000000";   -- hodnota PTR
 
+  signal mx1_sel: std_logic := '0';                                     -- selektor multiplexoru 1
+  signal mx2_sel: std_logic_vector(1 downto 0);                         -- selektor multiplexoru 2
 
-  signal mx1_out: std_logic_vector(12 downto 0) := (others => '0');
-  signal mx2_out: std_logic_vector(7 downto 0) := (others => '0');
-
-  signal mx1_sel: std_logic := '0';
-  signal mx2_sel: std_logic_vector(1 downto 0);
-
-  signal do_while_reg: std_logic := '1';
+  signal do_while_reg: std_logic := '1';                                -- pomocny signal pro do-while cykly
 
 
   -- Stavy FSM 
@@ -93,12 +89,14 @@ architecture behavioral of cpu is
         fsm_null                                                
   );
 
-  signal actual_state : fsm_state := fsm_start;
-  signal next_state : fsm_state := fsm_start;
+  signal actual_state : fsm_state := fsm_start; -- aktualni stav FSM
+  signal next_state : fsm_state := fsm_start;   -- nasledujici stav FSM
 
 begin -- architecture
 
-
+  ------------------------------------------------
+  --        FSM NEXT STATE LOGIC PROCESS        --
+  ------------------------------------------------
   fsm_state_logic_proc: process(CLK, RESET, EN)
   begin
       if RESET = '1' then
@@ -110,6 +108,10 @@ begin -- architecture
       end if;
   end process;
 
+
+  ------------------------------------------------
+  --                FSM PROCESS                 --
+  ------------------------------------------------
   fsm_proc: process (actual_state, OUT_BUSY, IN_VLD, DATA_RDATA, cnt_state)
   begin
     -- init --
@@ -127,7 +129,7 @@ begin -- architecture
     OUT_WE <= '0';
     cnt_set1 <= '0';
 
-      
+
     case actual_state is
 
       ------------------------------------------------
@@ -174,9 +176,9 @@ begin -- architecture
         end case;
 
 
-      -------------------------------------------------
-      --               POINTER MOVEMENT              --
-      -------------------------------------------------
+      ------------------------------------------------
+      --               POINTER MOVEMENT             --
+      ------------------------------------------------
       when fsm_pointer_inc =>
         next_state <= fsm_start;
         ptr_inc <= '1';
@@ -227,7 +229,7 @@ begin -- architecture
         DATA_EN <= '1';
         mx1_sel <= '1';
         DATA_RDWR <= '0'; -- cteni
-                
+
 
       when fsm_value_dec2 =>
         next_state <= fsm_value_dec3; 
@@ -240,11 +242,11 @@ begin -- architecture
         pc_inc <= '1';
         mx1_sel <= '1'; -- ptr
         DATA_EN <= '1'; 
-      
 
-      --------------------------------------------------
-      --               WHILE LOOP BEGIN               --
-      --------------------------------------------------
+
+      ------------------------------------------------
+      --              WHILE LOOP BEGIN              --
+      -------------------------------------------------
       when fsm_while_begin0 => 
         next_state <= fsm_while_begin1;
         pc_inc <= '1';
@@ -345,8 +347,6 @@ begin -- architecture
         next_state <= fsm_while_end6;
 
 
-
-
       ------------------------------------------------
       --             DO-WHILE LOOP BEGIN            --
       ------------------------------------------------
@@ -391,8 +391,7 @@ begin -- architecture
 
       when fsm_do_while_begin5 =>
         next_state <= fsm_do_while_begin3;
-      
-      
+
 
       ------------------------------------------------
       --              DO-WHILE LOOP END             --
@@ -520,7 +519,9 @@ begin -- architecture
   end process;
   
 
-  ------ CNT ------
+  ------------------------------------------------
+  --                CNT PROCESS                 --
+  ------------------------------------------------
   cnt_proc: process(CLK, RESET)
   begin
     if RESET = '1' then
@@ -538,7 +539,9 @@ begin -- architecture
   end process;
 
 
-  ---- PC ------
+  ------------------------------------------------
+  --                 PC PROCESS                 --
+  ------------------------------------------------
   pc_proc: process(CLK, RESET)
   begin
     if RESET = '1' then
@@ -555,7 +558,9 @@ begin -- architecture
 
 
 
-  ------ PTR ------
+  ------------------------------------------------
+  --                PTR PROCESS                 --
+  ------------------------------------------------
   ptr_proc: process(CLK, RESET)
   begin
     if RESET = '1' then
@@ -571,7 +576,9 @@ begin -- architecture
   end process;
 
 
-  ------ MX1 ------
+  ------------------------------------------------
+  --            MULTIPLEXOR 1 PROCESS           --
+  ------------------------------------------------
   mx1_proc: process(RESET, CLK, mx1_sel, pc_state, ptr_state)
   begin
     if RESET = '1' then
@@ -586,7 +593,9 @@ begin -- architecture
   end process;
 
 
-  ------ MX2 ------
+  ------------------------------------------------
+  --            MULTIPLEXOR 2 PROCESS           --
+  ------------------------------------------------
   mx2_proc: process(RESET, CLK, mx2_sel, DATA_RDATA, IN_DATA)
   begin
     if RESET = '1' then
