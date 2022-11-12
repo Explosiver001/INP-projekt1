@@ -18,7 +18,7 @@ entity cpu is
     EN    : in std_logic;  -- povoleni cinnosti procesoru
 
     -- synchronni pamet RAM
-    DATA_ADDR  : out std_logic_vector(12 downto 0) := (others => '0'); -- adresa do pameti
+    DATA_ADDR  : out std_logic_vector(12 downto 0); -- adresa do pameti
     DATA_WDATA : out std_logic_vector(7 downto 0); -- mem[DATA_ADDR] <- DATA_WDATA pokud DATA_EN='1'
     DATA_RDATA : in std_logic_vector(7 downto 0);  -- DATA_RDATA <- ram[DATA_ADDR] pokud DATA_EN='1'
     DATA_RDWR  : out std_logic;                    -- cteni (0) / zapis (1)
@@ -57,8 +57,6 @@ architecture behavioral of cpu is
   signal mx1_sel: std_logic := '0';                                     -- selektor multiplexoru 1
   signal mx2_sel: std_logic_vector(1 downto 0);                         -- selektor multiplexoru 2
 
-  signal do_while_reg: std_logic := '1';                                -- pomocny signal pro do-while cykly
-
 
   -- Stavy FSM 
   type fsm_state is (
@@ -76,11 +74,11 @@ architecture behavioral of cpu is
     --  [   || 0x5B ||zacatek while cyklu                                         
         fsm_while_begin0, fsm_while_begin1, fsm_while_begin2, fsm_while_begin3, fsm_while_begin4,fsm_while_begin5,     
     --  ]   || 0x5D ||konec while cyklu                              
-        fsm_while_end0, fsm_while_end1, fsm_while_end2, fsm_while_end3, fsm_while_end4, fsm_while_end5, fsm_while_end6, fsm_while_end7, fsm_while_end8,fsm_while_end9,    
+        fsm_while_end0, fsm_while_end1, fsm_while_end2, fsm_while_end3, fsm_while_end4, fsm_while_end5, fsm_while_end6, fsm_while_end7, fsm_while_end8,fsm_while_end9, fsm_while_end10,    
     --  (   || 0x28 ||zacatek do-while cyklu                                
-        fsm_do_while_begin0, fsm_do_while_begin1, fsm_do_while_begin2, fsm_do_while_begin3, fsm_do_while_begin4, fsm_do_while_begin5,    
+        fsm_do_while_begin,
     --  )   || 0x29 ||konec do-while cyklu                                
-        fsm_do_while_end0, fsm_do_while_end1, fsm_do_while_end2, fsm_do_while_end3, fsm_do_while_end4, fsm_do_while_end5, fsm_do_while_end6, fsm_do_while_end7, fsm_do_while_end8,fsm_do_while_end9, 
+        fsm_do_while_end0, fsm_do_while_end1, fsm_do_while_end2, fsm_do_while_end3, fsm_do_while_end4, fsm_do_while_end5, fsm_do_while_end6, fsm_do_while_end7, fsm_do_while_end8,fsm_do_while_end9, fsm_do_while_end10,
     --  .   || 0x2E ||vytiskni aktualni hodnotu bunky                                    
         fsm_print_value0, fsm_print_value1, fsm_print_value2, fsm_print_value3, fsm_print_value4,  
     --  ,   || 0x2C ||nacti hodnotu a uloz do aktualni bunky                                      
@@ -161,7 +159,7 @@ begin -- architecture
           when X"5D" => --  ]   || 0x5D ||konec while cyklu
             next_state <= fsm_while_end0;
           when X"28" => --  (   || 0x28 ||zacatek do-while cyklu
-            next_state <= fsm_do_while_begin0;
+            next_state <= fsm_do_while_begin;
           when X"29" => --  )   || 0x29 ||konec do-while cyklu
             next_state <= fsm_do_while_end0;
           when X"2E" => --  .   || 0x2E ||vytiskni aktualni hodnotu bunky
@@ -294,32 +292,35 @@ begin -- architecture
       when fsm_while_end0 =>     
         next_state <= fsm_while_end1;
         mx1_sel <= '1'; -- ptr
-        DATA_EN <= '1'; 
         
-      when fsm_while_end1 => 
+        when fsm_while_end1 => 
+        DATA_EN <= '1'; 
         next_state <= fsm_while_end2;
 
       when fsm_while_end2 => 
+        next_state <= fsm_while_end3;
+
+      when fsm_while_end3 => 
         if DATA_RDATA = "0000000000000" then
           pc_inc <= '1';
           next_state <= fsm_start;
         else
           cnt_set1 <= '1';
           pc_dec <= '1';
-          next_state <= fsm_while_end3;
+          next_state <= fsm_while_end4;
         end if;
 
-      when fsm_while_end3 =>
-        next_state <= fsm_while_end4;
-
       when fsm_while_end4 =>
-        DATA_EN <= '1';
         next_state <= fsm_while_end5;
 
       when fsm_while_end5 =>
+        DATA_EN <= '1';
         next_state <= fsm_while_end6;
 
       when fsm_while_end6 =>
+        next_state <= fsm_while_end7;
+
+      when fsm_while_end7 =>
         if cnt_state = "0000000000000" then
           next_state <= fsm_start;
         else
@@ -328,78 +329,43 @@ begin -- architecture
           elsif DATA_RDATA = X"5B" then
             cnt_dec <= '1';
           end if;
-          next_state <= fsm_while_end7;
+          next_state <= fsm_while_end8;
         end if;
 
-      when fsm_while_end7=>
+      when fsm_while_end8=>
         if cnt_state = "0000000000000" then
           pc_inc <= '1';
         else
           pc_dec <= '1';
         end if;
-        next_state <= fsm_while_end8;
-
-      when fsm_while_end8 =>
-        DATA_EN <= '1';
         next_state <= fsm_while_end9;
 
       when fsm_while_end9 =>
-        next_state <= fsm_while_end6;
+        DATA_EN <= '1';
+        next_state <= fsm_while_end10;
+
+      when fsm_while_end10 =>
+        next_state <= fsm_while_end7;
 
 
       ------------------------------------------------
       --             DO-WHILE LOOP BEGIN            --
       ------------------------------------------------
-      when fsm_do_while_begin0 => 
-        next_state <= fsm_do_while_begin1;
-        pc_inc <= '1';
-        mx1_sel <= '1'; -- ptr
-
-      when fsm_do_while_begin1 =>
-        next_state <= fsm_do_while_begin2;
-        mx1_sel <= '1'; -- ptr
-        DATA_EN <= '1'; 
-
-      when fsm_do_while_begin2 =>
-        if DATA_RDATA /= X"00" or do_while_reg = '1' then 
-          next_state <= fsm_start;
-          do_while_reg <= '0';
-        else
-          next_state <= fsm_do_while_begin3;
-          cnt_set1 <= '1';
-          DATA_EN <= '1'; 
-        end if;
-      
-      when fsm_do_while_begin3 =>
-        if cnt_state = "0000000000000" then
-          pc_dec <= '1';
-          next_state <= fsm_start;
-          do_while_reg <= '1';
-        else
-          if DATA_RDATA = X"28" then
-            cnt_inc <= '1';
-          elsif DATA_RDATA = X"29" then
-            cnt_dec <= '1';
-          end if;
-          pc_inc <= '1';
-          next_state <= fsm_do_while_begin4;
-        end if;
-
-      when fsm_do_while_begin4 =>
-        DATA_EN <= '1';
-        next_state <= fsm_do_while_begin5;
-
-      when fsm_do_while_begin5 =>
-        next_state <= fsm_do_while_begin3;
-
+      when fsm_do_while_begin => 
+              next_state <= fsm_start;
+              pc_inc <= '1';
+      -- pozn: nepotrebujeme oseteni podminky, osetreni probiha v do_while_end stavech 
 
       ------------------------------------------------
       --              DO-WHILE LOOP END             --
       ------------------------------------------------
       when fsm_do_while_end0 =>     
-        next_state <= fsm_do_while_end1;
+        next_state <= fsm_do_while_end10;
         mx1_sel <= '1'; -- ptr
+
+      when fsm_do_while_end10 =>
         DATA_EN <= '1'; 
+        next_state <= fsm_do_while_end1;
         
       when fsm_do_while_end1 => 
         next_state <= fsm_do_while_end2;
